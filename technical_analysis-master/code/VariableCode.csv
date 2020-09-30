@@ -1,0 +1,10 @@
+﻿Variable, Identifier,Variable, Identifier,Variable, Identifier
+Close price, A1,CPI monthly inflation, A10,PPE, A18
+Open price, A2,Dividend, A11,Cash, A19
+High price, A3,Revenue, A12,Total equity, A20
+Low price, A4,Net Income, A13,Non current liability, A21
+Volume, A5,Basic earnings per share, A14,Cash flows (used in)/from operating activities, A22
+Adjusted price, A6,Diluted earnings per share, A15,Net cash flows (used in)/from investing activities, A23
+Interest rate, A7,Total assets, A16,Net cash flows (used in)/from financing activities, A24
+Exchange rate (1 USD), A8,Intangible assets, A17,Net cash and cash equivalents at end of period, A25
+Political stability, A9,,,,

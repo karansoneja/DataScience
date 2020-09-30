@@ -1,0 +1,839 @@
+---
+output: 
+  pdf_document: 
+    keep_md: yes
+    keep_tex: true
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_width: 12
+    fig_height: 6
+    fig_caption: true
+    includes: 
+      in_header: my_header.tex
+    highlight: tango
+    df_print: kable # or kable or tibble
+    citation_package: natbib
+    
+    
+
+title: "Data science report V2"
+
+author: 
+- Antonio Malatesta #https://stackoverflow.com/questions/26043807/multiple-authors-and-subtitles-in-rmarkdown-yaml
+- Karan Soneja
+- Michele D'Ambrosio
+
+date: "19/12/2019"
+
+abstract: |
+ *A short summary of the work.*
+ 
+bibliography: bibliography.bib
+csl: econometrica.csl
+fontsize: 11pt 
+
+# indent: true 
+# ref https://stackoverflow.com/questions/29460112/first-line-paragraph-indenting-in-pdfs-using-r-markdown
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'D:/2017-2018/data_analysis/technical_analysis')
+knitr::opts_chunk$set( message = FALSE, warning = FALSE )
+# /usepackage{mathtools} #https://rpubs.com/davidpassmore/213041
+library(quantmod)
+library(PerformanceAnalytics)
+library(png)
+library(magrittr)
+library(blotter)
+library(knitr)
+library(purrr)
+library(kableExtra)
+```
+
+\newpage
+# Introduction
+ 
+*What motivates us to do this work. Touch on important finding in literature. *
+
+
+# Data 
+
+The data used in this report consists of the stock price of some of the 10 biggest publicly quoted French companies, as of September 2019[^cac_40_ref].
+
+[^cac_40_ref]: The full list here: https://live.euronext.com/en/product/indices/FR0003500008-XPAR/market-information
+
+<!-- A TABLE -->
+
+\begin{table}[ht]
+\caption:{Top ten firms in CAC40 by market cap, September 2019}
+\centering
+\begin{tabular}{|c|c|c|c|}
+  \hline
+Company	& MNEMO	 &	Sector  & Weight\% \\
+  \hline
+  TOTAL &	FP  & Oil and Gas &	9,54 \\
+  LVMH &	MC  & Personal and Household Goods & 7,97 \\
+  SANOFI & SAN  & Health Care &	7,54 \\
+  AIRBUS & AIR  & Industrial Goods and Services &	5,47 \\
+  L'OREAL	& OR  & Personal and Household Goods &	5,10 \\
+  AIR LIQUIDE &	AI  & Chemicals &	4,40 \\
+  DANONE &	BN  & Food and Beverage & 4,14 \\
+  VINCI &	DG & Construction and Materials & 3,97 \\
+  BNP PARIBAS ACT.A &	BNP  & Banks & 3,95 \\
+  SAFRAN & SAF  & Industrial Goods and Services & 3,72 \\
+   \hline
+  \end{tabular}
+\end{table} 
+
+<!-- I have 5 yrs of data{michele} -->
+With the following code, we downloaded the daily open, high, low, close, Volume and adjusted price of the desired stock from 2012-12-28 to 2018-12-31.
+
+```{r eval= FALSE}
+getSymbols("COMPANY CODE", src="yahoo", from="2012-12-28", to="2018-12-31")
+```
+
+In some models, we also used economic and financial variables to test whether they could increase the predictability power of the analysis. See the following table for a detailed list of the variables we studied.
+
+<!-- can delete -->
+```{r Additional variables, echo=FALSE, include= FALSE}
+datasource= read.csv(file="D:/2017-2018/data_analysis/technical_analysis/report/DATASOURCE.csv",
+         header= TRUE, dec = ","  )
+
+pander::pander(datasource, caption = "Additional variables",
+               justify= "left", split.table= Inf )# split.cells = c(15,3,3,3,3,3,15,15)
+``` 
+
+<!-- CAN DELETE -->
+```{r option1, echo= FALSE, include = FALSE}
+col_names= c("Economic\nFactors","Source","Yearly Financial\nStatements Variables", "Source")
+
+text_tbl <- data.frame(
+
+  
+  EconomicFactors = 
+  c( " ","Daily interest rate",
+  " ", " ",
+  " ", "Daily Exchange rate (EUR/USD)", 
+  " ", " ",
+  " ", "Political Stability (yearly)", 
+  " ", " ",
+  " ",  "CPI Infaltion (monthly)", " "),
+
+  Source =
+  c( " ", "sdw.ecb.europa.eu",
+  " "," ",
+  " ","exchangerates.org",
+  " ", " ",
+  " ", "databank.worldbank.org", " ", " ",
+  " ", "www.inflation.eu", " "
+  ),
+  
+  # Source= ("sdw.ecb.europa.eu\nexchangerates.org\ndatabank.worldbank.org\nwww.inflation.eu"),
+
+  
+  YearlyFinancialStatementsVariables = 
+  c( "Dividend", "Revenue", 
+  "Net income", "Basic earnings per share",
+  "Diluted earnings per share", "Total assets",
+  "Intangible assets", "PPE",
+  "Cash", "Total equity", "Non current liability", 
+  "Cash flows from operating activities", 
+  "Net cash flows from investing activities", 
+  "Net cash flows from financing activities",
+  "Net cash and cash equivalents at end of period"
+  ),
+  
+  Source =
+  c( " ", " ",
+  "dividenmax.com"," ",
+  "airbus.com"," ",
+  " airliquide.com", " ",
+  "danone.com", " ", "vinci.com", " ",
+  "invest.bnpparibas.com", " ", " "
+  ),
+  #   Source= ("dividenmax.com\nairbus.com\nairliquide.com\ndanone.com\nvinci.com\ninvest.bnpparibas.com"),
+  check.names = FALSE
+)
+
+
+## === option 1 
+# knitr::kable(text_tbl, col.names = col_names) %>%
+# kableExtra::kable_styling(full_width = FALSE) %>%
+#   column_spec(1, bold = FALSE ) %>%
+#   column_spec(2, border_right = FALSE) %>%
+#   column_spec(3, bold= TRUE) 
+
+## == option 2
+# colnames(text_tbl) <- c("Economic\nFactors","Source","Yearly Financial\nStatements Variables", "Source")
+# pander::panderOptions('digits',4)
+# pander::panderOptions('round',3)
+# pander::pander(text_tbl, caption= "Additional variables ", split.table= Inf)
+
+## == option 3
+knitr::kable(text_tbl, "latex", booktabs= TRUE, caption = "Additional variables", col.names = col_names ) %>%
+  kableExtra::row_spec(1:14, extra_latex_after = "\\cline{3-3}") %>%
+  #kableExtra::row_spec(6, hline_after = TRUE) %>%
+  kableExtra::column_spec(3, border_left = TRUE ) %>%
+  kableExtra::kable_styling(latex_options="scale_down") %>%
+  kableExtra::kable_styling(latex_options = "HOLD_position") 
+
+```  
+
+
+```{r first_half,  echo=FALSE, include=TRUE}
+col_econ= c("Economic\nFactors","Source")
+
+
+econFact <- data.frame(
+  EconomicFactors = 
+  c( "Daily interest rate",
+     "Daily Exchange rate\n(EUR/USD)", 
+     "Political Stability (yearly)", 
+     "CPI Infaltion (monthly)"),
+
+  Source =
+  c(  "sdw.ecb.europa.eu",
+      "exchangerates.org",
+      "databank.worldbank.org",  
+      "www.inflation.eu"),    
+  check.names = FALSE) %>%
+  `colnames<-`(col_econ)
+  # Source= ("sdw.ecb.europa.eu\nexchangerates.org\ndatabank.worldbank.org\nwww.inflation.eu"),
+
+
+knitr::kable(econFact ,
+             "latex", booktabs= TRUE, caption = "Additional economical variables" ,
+              valign = 't') %>%
+  #kableExtra::row_spec(1:14, extra_latex_after = "\\cline{3-3}") %>%
+  #kableExtra::row_spec(6, hline_after = TRUE) %>%
+  # kableExtra::column_spec(3, border_left = TRUE ) %>%
+  # kableExtra::kable_styling(latex_options="scale_down") %>%
+  kableExtra::kable_styling(latex_options = "HOLD_position") 
+```
+
+
+some text in between to have better formatting 
+
+```{r second_half, echo=FALSE, include=TRUE}
+col_finan = c("Yearly Financial\nStatements Variables", "Source")
+
+financFact <- data.frame(
+  YearlyFinancialStatementsVariables = 
+  c( "Dividend", "Revenue", 
+  "Net income", "Basic earnings\nper share",
+  "Diluted earnings\nper share", "Total assets",
+  "Intangible assets", "PPE",
+  "Cash", "Total equity", "Non current liability", 
+  "Cash flows from operating activities", 
+  "Net cash flows from\ninvesting activities", 
+  "Net cash flows from\nfinancing activities",
+  "Net cash and cash\nequivalents at end of period"
+  ),
+  
+  Source =
+  c( " ", " ",
+  "dividenmax.com"," ",
+  "airbus.com"," ",
+  " airliquide.com", " ",
+  "danone.com", " ", "vinci.com", " ",
+  "invest.bnpparibas.com", " ", " "
+  ),
+  check.names = FALSE
+) %>%
+  `colnames<-`(col_finan)
+
+
+knitr::kable( financFact,
+             "latex", booktabs= TRUE, caption = "Additional economical variables" ,
+              valign = 't') %>%
+    kableExtra::kable_styling(latex_options = "HOLD_position") 
+  
+```
+
+
+<!-- CAN DELETE -->
+```{r option3, echo=FALSE, include=FALSE}
+col_names= c("Economic\nFactors","Source","Yearly Financial\nStatements Variables", "Source")
+
+text_tbl <- data.frame(
+
+  EconomicFactors = 
+  c( "Daily interest rate",
+     "Daily Exchange\nrate (EUR/USD)", 
+     "Political Stability (yearly)", 
+     "CPI Inflation\n(monthly)",
+     "","","","","","","","","","",""),
+
+  Source =
+  c(  "sdw.ecb.europa.eu",
+      "exchangerates.org",
+      "databank.worldbank.org",  
+      "inflation.eu",
+      "","","","","","","","","","",""),    
+
+  
+  # Source= ("sdw.ecb.europa.eu\nexchangerates.org\ndatabank.worldbank.org\nwww.inflation.eu"),
+
+  
+  YearlyFinancialStatementsVariables = 
+  c( "Dividend", "Revenue", 
+  "Net income", "Basic earnings per share",
+  "Diluted earnings per share", "Total assets",
+  "Intangible assets", "PPE",
+  "Cash", "Total equity", "Non current liability", 
+  "Cash flows from operating activities", 
+  "Net cash flows from investing activities", 
+  "Net cash flows from financing activities",
+  "Net cash and cash equivalents at end of period"
+  ),
+  
+  Source =
+  c( " ", " ",
+  "dividenmax.com"," ",
+  "airbus.com"," ",
+  " airliquide.com", " ",
+  "danone.com", " ", "vinci.com", " ",
+  "invest.bnpparibas.com", " ", " "
+  ),
+  #   Source= ("dividenmax.com\nairbus.com\nairliquide.com\ndanone.com\nvinci.com\ninvest.bnpparibas.com"),
+  check.names = FALSE
+) %>%
+  `colnames<-`(col_names)
+
+
+## == option 1
+# knitr::kable(text_tbl, "latex", booktabs= TRUE, caption = "Additional variables", col.names = col_names ) %>%
+#   kableExtra::row_spec(1:14, extra_latex_after = "\\cline{3-3}") %>%
+#   #kableExtra::row_spec(6, hline_after = TRUE) %>%
+#   kableExtra::column_spec(3, border_left = TRUE ) %>%
+#   kableExtra::kable_styling(latex_options="scale_down") %>%
+#   kableExtra::kable_styling(latex_options = "HOLD_position") 
+
+## === option2
+
+pander::pander(text_tbl, caption = "Additional variables",
+               justify= "left", split.table= Inf, split.cells = c(3,4,10,4))
+
+```
+
+
+We gathered all the data mentioned above in one single master database that can be found in the file "master file.xlsx".
+
+
+\newpage
+# Technical analysis: implementation of a naive strategy in R
+
+## try GP 
+  Make an attempt to get the gp working naively using trading signal generation with functions from above  
+
+## Some notes 
+### Some useful links
+1. A [list of easy TA indicators](http://www.tradinggeeks.net/2014/07/technical-analysis-with-r/). We have:
+    + MA
+    + Bollinger bands
+    + RSI
+    + MACD
+The code is shown but not shared. The package is {TTR}
+
+2. A series of posts on trading
+    + Attempt of [backtesting](https://quantstrattrader.wordpress.com/category/portfolio-management/)  in quantmod
+    + Read quickly [part1](https://ntguardian.wordpress.com/2017/03/27/introduction-stock-market-data-r-1/); no need for the code beacuse it's in the next post. 
+    Here however a good tip on charting several price charts together. 
+    First Search << Create a plot showing all series as lines; >>. 
+    Second, use return normalization (search for << ## Loading required package: magrittr >> ).
+    Not much more in this part.
+    + Then read [part2](https://ntguardian.wordpress.com/2017/04/03/introduction-stock-market-data-r-2/) 
+
+
+### what indicators (from @Neftci1991)
+1. Trend crossing methods 
+    + New item
+  
+2. Moving average methods
+    + Respect Markov times theorem
+
+3. As a sidenote, don't forget about the importance of having an exit strategy. ( [reminder here](https://ntguardian.wordpress.com/2017/04/03/introduction-stock-market-data-r-2/))
+
+4. Add a [stop-loss rule](https://ntguardian.wordpress.com/2017/04/24/order-type-parameter-optimization-quantstrat/)
+
+5. On signals and rules, [here](https://statsmaths.github.io/stat395-f17/assets/final_project/amarnani.html)
+
+6. Don't forget to add a benchmarking stock (as the SPY for the US market ) to know what would have been like to have a long position on the market portfolio
+
+
+\newpage    
+# Neural networks
+Neural networks (NN) is a "black box" technique that finds non-linear connections and recognize patterns between one or multiple inputs to generate an output[^ref1] . We will test a 1-input NN[^ref2]  and a multiple-input NN[^ref3]  in the attempt to predict the next-day stock price of our 5 stocks, over a period of 30 trading days, from the 16/11/2018 to the 31/12/2018. Based on the predictions, we will develop an investing strategy where everyday, for the above-mentioned 30 days, we will invest all our capital (starting at 10,000 euro) into the stock that will have the biggest predicted increase in price the next day, according to our model. Consequently, the next day we will sell all our stocks bought the previous day, and invest again all our capital with the same reasoning. In this analysis, all commission and brokerage fees are ignored.
+
+[^ref1]:(https://pathmind.com/wiki/neural-network)
+[^ref2]:(http://rpubs.com/kapage/523169?fbclid=IwAR3RW_tVA_7SgCah7M0nmZL7anIL4gS_ZZ3dP_i_w8AOyQXoTMwXC_wQsoE)
+[^ref3]:(https://www.analyticsvidhya.com/blog/2017/09/creating-visualizing-neural-network-in-r/?fbclid=IwAR0z9tD0-WFxG3zVs8YmFaLF7RGnszbizQrhyGdyZG1-GL-D5coqBOnTiZE)
+
+
+## Benchmark
+To evaluate the performance of the NN as an investment decision-maker, instead of using a ROC Curve, we decided to compare it with a diversified, long-term investment strategy, where the initial capital of 10,000 euro is invested equally in the 5 stocks (2,000 euro per stock) at the beginning of the period (16/11/2018) and all stocks are then sold at the end of the period (31/12/2018). 
+
+<!-- CAN DELETE -->
+```{r Benchmark strategy outcome, echo=FALSE, include= FALSE}
+benchmark= read.csv(file="D:/2017-2018/data_analysis/technical_analysis/report/01.prediction.simple.csv",
+         header= TRUE, dec = ","  )
+
+colnames(benchmark) <- 
+  c("Dates", "AIR.PA","FP.PA","MC.PA","OR.PA","SAN.PA"," ","Capital" )
+pander::pander(benchmark, caption = "Benchmark strategy outcome",
+               justify= "left", split.table= Inf, split.cells = c(15,3,3,3,3,3,15,15))
+```
+
+
+```{r  benchmark2, echo=FALSE, include= TRUE}
+library(magrittr)
+benchmark= read.csv(file="D:/2017-2018/data_analysis/technical_analysis/report/01.prediction.simple.csv",
+                    header= TRUE, dec = ","  )
+
+colnames(benchmark) <- 
+  c("Dates", "AIR.PA","FP.PA","MC.PA","OR.PA","SAN.PA"," ","Capital" )
+
+knitr::kable(benchmark, "latex", booktabs= TRUE,caption = "Benchmark strategy outcome", ) %>%
+  kableExtra::row_spec(3, hline_after = TRUE) %>%
+  kableExtra::kable_styling(latex_options="scale_down") %>%
+  kableExtra::kable_styling(latex_options = "HOLD_position") 
+```
+
+As can be seen, the benchmark strategy has a return of -6%. Clearly, the higher the return of the NN-based investments, the more successful the NN algorithms will be. Moreover, in case of a return lower than -6% (lower than the "naive" strategy), the NN model will be considered as not useful in predicting stock prices.
+
+## 1-input NN
+The first NN model is a single hidden layer neural network. In this model there is one layer of input nodes that send weighted inputs to a subsequent layer of receiving nodes. The nnetar function in the forecast package fits a single hidden layer neural network model to a timeseries. The function model approach is to use lagged values of the time series as input data, reaching to a non-linear autoregressive model. The model takes as input the stock prices starting from the 31/12/2016 to 31/12/2018. The goal is to predict the stock prices between 16/11/2018 and 31/12/2018. 
+
+<!-- Credit: http://rpubs.com/kapage/523169?fbclid=IwAR1LcmQ6zQ7Nx0FbMrQqQFml9QtJWx9_bybKAsKwWIPplCS60KBbpoDCElM -->
+
+<!-- download file PREDICTION SIMPLE.xlsx -->
+
+```{r eval= FALSE}
+
+library(prophet)
+library(quantmod)
+library(forecast)
+library(xlsx)
+library(tseries)
+library(timeSeries)
+library(dplyr)
+library(fGarch)
+#Download the prices for the 5 stocks for the desired time frame
+getSymbols("AI.PA", src="yahoo", from="2016-12-31", to="2018-12-31")
+getSymbols("AIR.PA", src="yahoo", from="2016-12-31", to="2018-12-31")
+getSymbols("BN.PA", src="yahoo", from="2016-12-31", to="2018-12-31")
+getSymbols("BNP.PA", src="yahoo", from="2016-12-31", to="2018-12-31")
+getSymbols("DG.PA", src="yahoo", from="2016-12-31", to="2018-12-31")
+
+alpha <- 1.5^(-10)
+```
+
+We generate the predicted price of the 30 days for the 5 stocks with a `for loop`, where the prices are predicted one at the time.
+
+```{r eval= FALSE}
+for (n in 1:30){
+  close_price <- as.numeric(AIR.PA[1:479+n,'AIR.PA.Close'])
+#Hidden layers creation
+  alpha <- 1.5^(-10) 
+  hn <- length(close_price)/(alpha*(length(close_price)+1))
+#Fitting nnetar
+  lambda <- BoxCox.lambda(close_price)
+  dnn_pred <- nnetar(close_price, size= hn, lambda = lambda) 
+  dnn_forecast <- forecast(dnn_pred, h= 1, PI = TRUE)   
+  AIR.PA.P[n] = dnn_forecast[["mean"]] 
+}
+
+for (n in 1:30){
+   close_price <- as.numeric(BN.PA[1:479+n,'BN.PA.Close'])
+   hn <- length(close_price)/(alpha*(length(close_price)+1))
+   lambda <- BoxCox.lambda(close_price)
+   dnn_pred <- nnetar(close_price, size= hn, lambda = lambda)
+   dnn_forecast <- forecast(dnn_pred, h= 1, PI = TRUE)
+   BN.PA.P[n] = dnn_forecast[["mean"]]
+ }
+ 
+ #We run the same for loop above also for AI.PA, BNP.PA and DG.PA
+ 
+```
+
+
+We create a table with the predicted daily increase in price for every stock during the 30 days. After that, we will identify the stock with the highest predicted increase in price for every day. This will be the stock where to invest all 
+the capital for the day.
+
+```{r eval= FALSE}
+AIR.LOL <- AIR.PA.P - as.numeric(AIR.PA[480:509,'AIR.PA.Close'])
+BN.LOL <- BN.PA.P - as.numeric(BN.PA[480:509,'BN.PA.Close'])
+BNP.LOL <- BNP.PA.P - as.numeric(BNP.PA[480:509,'BNP.PA.Close'])
+DG.LOL <- DG.PA.P - as.numeric(DG.PA[480:509,'DG.PA.Close'])
+
+df = data.frame(AI.LOL,AIR.LOL,BN.LOL,BNP.LOL,DG.LOL)
+
+for (n in 1:30){
+   if (max(df[n,]) == df[n,"AI.LOL"]){
+   AI.DIF[n] = "AI.PA"
+   } else if (max(df[n,]) == df[n,"AIR.LOL"]){
+   AI.DIF[n] = "AIR.PA"
+   } else if (max(df[n,]) == df[n,"BN.LOL"]){
+   AI.DIF[n] = "BN.PA"
+   } else if (max(df[n,]) == df[n,"BNP.LOL"]){
+   AI.DIF[n] = "BNP.PA"
+   } else if (max(df[n,]) == df[n,"DG.LOL"]){
+   AI.DIF[n] = "DG.PA"
+   }
+}
+```
+
+
+<!-- See file "PREDICTION SIMPLE.xlsx" to see results of investment strategy based on the code above -->
+
+```{r 1-input NN strategy outcome, echo=FALSE}
+nn_one= read.csv(file="D:/2017-2018/data_analysis/technical_analysis/report/02.prediction.simple.csv",
+         header= TRUE, dec = ","  )
+
+
+colnames(nn_one) <- c("Day",	"Invest in",	"date",	"AI",	"AIR",	"BNP",	"BN",	"DG",	"#shares bought",	"€ Value "
+)
+pander::pander(nn_one, caption= "1-input NN strategy outcome", justify= "left", split.table= Inf, split.cells = c(1,2,4,2,2,2,2,2,3,4))
+
+
+```
+
+
+### Evaluation of 1-input NN
+As can be seen, the investment strategy based on the 1-input NN has a return of +4%, which is an extremely good result considering the benchmark strategy return of -6%. This implies that, even though all the 5 stocks had negative performances during the time frame, the NN successfully identified the right stock at the right time, leading to a positive return.
+
+
+## Multiple-input NN
+The second NN model uses the neuralnet library for the analysis. It has 3 neurons in its hidden layer and the weights are calculated using a back propagation algorithm. The model takes several inputs that for simpliticy have been coded according to the following table:
+
+```{r variables coding, echo=FALSE}
+coding = read.csv(file="D:/2017-2018/data_analysis/technical_analysis/report/VariableCode.csv",
+         header= TRUE, dec = ","  )
+
+colnames(coding) <- c("Variable", "Identifier","Variable", "Identifier","Variable", "Identifier")
+pander::pander(coding, caption= "Variables coding", justify= "left", split.table= Inf)
+
+
+
+
+```
+
+
+The goal is always to predict stock prices of the 30 days, hoping that the inclusion of additional variables like high price, low price, inflation and financial statements data will provide more accurate predictions.
+
+<!-- Credits: https://www.analyticsvidhya.com/blog/2017/09/creating-visualizing-neural-network-in-r/?fbclid=IwAR18hPVMs63r5YbqIzvmgVjxax_rk9Fi9SmrtBnw24hdxSy5EFTynvDaHOY -->
+
+
+```{r eval= FALSE}
+#Download "AI1.csv" "AIR1.csv" "BN1.csv" "BNP1.csv" 
+#Download "DG1.csv" "PREDICTION SIMPLE.xlsx"
+library(readr)
+AI1 <- read_csv2("D:/2017-2018/data_analysis/technical_analysis/report/AI1.csv")
+data <- AI1[, c(2:26)]
+View(data)
+#we take all the data frame as training data to predict the next-day stock price
+datatrain = data[ 1:1531, ]
+datatest = data[ 1532, ]
+#we normalize the values to avoid results based only on the disporportionate
+#size of certain inputs
+max = apply(data , 2 , max)
+min = apply(data, 2 , min)
+scaled = as.data.frame(scale(data, center = min, scale = max - min))
+# install library
+install.packages("neuralnet ")
+#load library
+library(neuralnet)
+# creating training and test set
+# the test set will be the closing price of a single day
+# the training set will be all the data of the days before the day of the test set
+trainNN = scaled[1:1531 , ]
+testNN = scaled[1532 , ] 
+
+```
+
+
+We want to predict every next day price for the 5 stocks. But first, we want to check weather the the model gives more accurate results with or without the financial statement data as inputs.
+
+
+```{r eval= FALSE}
+# fit neural network
+set.seed(2)
+# Develop a NN model with tomorrow closing price as output and
+# all the other variables (taken today) as input
+NN = neuralnet( A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10
++ A11 + A12 + A13 + A14 + A15 + A16 + A17 + A18 + A19 + A20 + A21
++ A22 + A23 + A24 + A25, trainNN, hidden = 3 , linear.output = T ) 
+# plot neural network
+plot(NN)
+```
+In the image below we can see a graphical representation of the neuronal net: 
+It has 3 neurons in its hidden layer. The black lines show the connections with weights. The weights are calculated using a back propagation algorithm. The blue line displays the bias term.
+
+![Caption for the picture.](D:/2017-2018/data_analysis/technical_analysis/report/NNrep.png)
+
+```{r eval= FALSE}
+predict_testNN = compute(NN, testNN[,c(2:25)])
+# We descale the output to obtain the results in the real scale
+predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1)))
++ min(data$A1)
+# We create an array where to store the results per day for each stck
+AI.P <- c()
+View(data)
+View(data)
+# We run the model for every single day per stock, to predict the prices 
+# one by one
+View(predict_testNN)
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+# model with financial statements data
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10
+  + A11 + A12 + A13 + A14 + A15 + A16 + A17 + A18 + A19 + A20 + A21
+  + A22 + A23 + A24 + A25, trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:25)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1)))
+  + min(data$A1)
+  AI.P[n] <- predict_testNN
+}
+View(AI.P)
+AI.P2 <- c()
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+# model without financial statements data
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10,
+  trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:10)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1)))
+  + min(data$A1)
+  AI.P2[n] <- predict_testNN
+}
+# Calculate Root Mean Square Error (RMSE)
+Reals <- data[1503:1532,1]
+View(Reals)
+View(data)
+RMSE <- sqrt(sum((Reals-AI.P)^2)) # RMSE = 6.072
+RMSE2 <- sqrt(sum((Reals-AI.P2)^2)) # RMSE2 = 6.064
+View(AI.P)
+```
+
+
+As can be seen, the model without the financial statement variables (RMSE = 6.072) is more accurate than the model with them (RMSE2 = 6.064) according to the RMSE value. Hence, we will continue without taking into account the financial statement variables.
+
+```{r eval= FALSE}
+#We predict the prices of the other 4 stocks one by one,
+#without the financial statement variables as input
+library(readr)
+AIR1 <- read_csv2("D:/2017-2018/data_analysis/technical_analysis/data/AIR1.csv")
+data <- AIR1
+AIR.P2 <- c()
+View(data)
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10,
+  trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:10)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1)))
+  + min(data$A1)
+  AIR.P2[n] <- predict_testNN
+}
+BN.P2 <- c()
+library(readr)
+BN1 <- read_csv2("D:/2017-2018/data_analysis/technical_analysis/data/BN1.csv")
+View(BN1)
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10,
+  trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:10)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1)))
+  + min(data$A1)
+  BN.P2[n] <- predict_testNN
+}
+View(data)
+data <- BN1
+View(data)
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10,
+  trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:10)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1)))
+  + min(data$A1)
+  BN.P2[n] <- predict_testNN
+}
+library(readr)
+BNP1 <- read_csv2("D:/2017-2018/data_analysis/technical_analysis/data/BNP1.csv")
+View(BNP1)
+data <- BNP1
+View(data)
+BNP.P2 <- c()
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10,
+  trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:10)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1)))
+  + min(data$A1)
+  BNP.P2[n] <- predict_testNN
+}
+DG.P2 <- c()
+library(readr)
+DG1 <- read_csv2("D:/2017-2018/data_analysis/technical_analysis/data/DG1.csv")
+View(DG1)
+data <- DG1
+View(data)
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10, 
+                 trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:10)])
+  predict_testNN = (predict_testNN$net.result * 
+                      (max(data$A1) - min(data$A1))) + min(data$A1)
+  DG.P2[n] <- predict_testNN
+}
+```
+
+We want to create a table with the predicted daily increase in price for every stock during the 30 days. After that, we will identify the stock with the highest predicted increase in price for every day. This will be the stock where to invest all the capital for the day.
+
+```{r eval= FALSE}
+View(AIR.P2)
+View(AI1)
+AI.R <- AI1[1502:1531, c(2)]
+View(AI.R)
+View(AI1)
+View(AIR1)
+AIR.R <- AIR1[1502:1531, c(1)]
+View(BN1)
+BN.R <- BN1[1502:1531, c(1)]
+View(BNP1)
+BNP.R <- BNP1[1502:1531, c(1)]
+View(DG1)
+DG.R <- DG1[1502:1531, c(1)]
+AI.DIF <- AI.P2 - AI.R
+AIR.DIF <- AIR.P2 - AIR.R
+BN.DIF <- BN.P2 - BN.R
+BNP.DIF <- BNP.P2 - BNP.R
+DG.DIF <- DG.P2 - DG.R
+df = data.frame(AI.DIF,AIR.DIF,BN.DIF,BNP.DIF,DG.DIF)
+View(df)
+#identify the stock with the highest predicted increase in price for every day
+X <- c()
+for (n in 1:30){
+  if (max(df[n,]) == df[n,"A1"]){
+    X[n] = "AI.PA"
+  } else if (max(df[n,]) == df[n,"A1.1"]){
+    X[n] = "AIR.PA"
+  } else if (max(df[n,]) == df[n,"A1.2"]){
+    X[n] = "BN.PA"
+  } else if (max(df[n,]) == df[n,"A1.3"]){
+    X[n] = "BNP.PA"
+  } else if (max(df[n,]) == df[n,"A1.4"]){
+    X[n] = "DG.PA"
+  }
+}
+View(X)
+
+```
+
+
+<!-- see file "PREDICTION SIMPLE.xlsx" for the investment strategy outcome -->
+
+```{r multiple input NN strategy outcome, echo=FALSE}
+nn_mult= read.csv(file="D:/2017-2018/data_analysis/technical_analysis/report/03.prediction.simple.csv",
+         header= TRUE, dec = ","  )
+
+
+colnames(nn_mult) <- c("Day",	"Invest in",	"date",	"AI",	"AIR",	"BNP",	"BN",	"DG",	"#shares bought",	"€ Value "
+)
+pander::pander(nn_mult, caption= "Multiple-input NN strategy outcome", justify= "left", split.table= Inf)
+
+```
+
+
+### Evaluation of Multiple-input NN
+
+As can be seen, the multiple-input based investment has a return of -7%. This shows that this method cannot be used to predict stock prices. We believe this is because the method predicts prices based on just the previous-day values of several variables, hence without considering the time-serie behind the price trend. Instead, the 1-input NN took into account the whole trend of the prices during the previous 1 year and a half.
+
+## Neuronal Network Conclusion
+
+To conclude, we can argue that the 1-input NN can be successfully used to invest in stocks. We recommend to further test and validate this method over a larger number of stocks (100) and over a longer time frame (1 year of predicted prices) before investing in real life with this model.
+
+\newpage
+# Random forest
+## What is Random Forest?
+Random forest, consists of large number of individual decision trees that operate as an ensemble. Each decision tree in the forest spits out a class prediction and the class with the majority votes becomes our model’s prediction. So, in this case the technique of random forest is being used for Stock Price prediction. 
+
+## Why Random Forest?
+As it is termed as one of the easiest machine learning algorithms according to Sadia, Sharma and Paul (2019), it gives accurate results and reduces overfitting of the model with a good accuracy in the prediction. But, because of the high volatility and instability in the stock markets, prediction has become very challenging. The random forest algorithm randomly selects different observations and features to build several decision trees and then takes aggregate of all the decision trees. 
+
+## Data
+The data is split into partitions based on the conditions of the attribute. The data set we used is from 1 January 2013 to 31 December 2018 Of Top 5 Stocks in France Namely Air Liquide, Airbus, BNP Paribas, Danone, Vinci. After taking these datasets we have considered 19 variables which according to us affect the stock prices. They are : Interest Rates , Exchange Rate , Political Stability , Inflation , Dividend , Revenue , Net income , Basic Earnings Per Share , Diluted Earnings Per Share , Total Assets  , Intangible Assets , PPE , Cash  ,  Total Equity, Non- Current Liability, Cash Flows From Operating Activities , Net Cash Flows From Investing Activities , Net Cash Flows From Financing Activities , Net Cash And Cash Equivalents. And, in this model we are considering the Adjusted Price to be the dependent variable. This means we see the affect of all these variables on the Adjusted prices of the stock on daily basis. But, some of the variables like political stability and inflation are constant either for the whole year or the whole month. So, there is very less volatility in some variables which show that they don’t affect the prices as compared to the other variables.
+ 
+## Methodology
+70% of the data was used to train and 30% is used to test. The basic approach of the learning model is to learn the pattern and relationships in the data from the training set and then reproduce in the test set. In this model we are doing a random forest regression by considering 19 variables that could affect the stock prices. For applying the Random Forest algorithm, we are using R language to build the model. After running a linear multiple regression for all the stocks separately, we found that which is the variable which is affecting the prices the most. Then, we divide the dataset into testing data and training data. This will help us to train the model first and then test the remaining data according the train data.
+ 
+After training and testing, we apply the random forest algorithm and make predicitions. 
+
+
+
+
+# Conclusions
+
+\newpage
+# References 
+
+K. Hiba Sadia, Aditya Sharma, Adarrsh Paul, SarmisthaPadhi, Saurav Sanyal. Stock Market Prediction Using Machine Learning Algorithms. International Journal of Engineering and Advanced Technology (IJEAT) ISSN: 2249 – 8958, Volume-8 Issue-4, April 2019
+
+Gerard Biau. Analysis of a Random Forests Model. Journal of Machine Learning Research 13 (2012) 1063-1095
+
+Misha Denil, David Matheson, Nando de Freitas.  Narrowing the Gap: Random Forests In Theory and In Practice. University of Oxford, United Kingdom and University of British Columbia, Canada
+
+www.dividenmax.com
+www.airliquide.com
+www.invest.bnpparibas.com
+www.danone.com
+www.vinci.com 
+ 

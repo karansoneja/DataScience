@@ -1,0 +1,192 @@
+#Credits: https://www.analyticsvidhya.com/blog/2017/09/creating-visualizing-neural-network-in-r/?fbclid=IwAR18hPVMs63r5YbqIzvmgVjxax_rk9Fi9SmrtBnw24hdxSy5EFTynvDaHOY
+#Download "AI1.csv" "AIR1.csv" "BN1.csv" "BNP1.csv" "DG1.csv" "PREDICTION SIMPLE.xlsx"
+library(readr)
+AI1 <- read_csv2("Desktop/AI1.csv")
+data <- AI1[, c(2:26)]
+View(data)
+datatrain = data[ 1:1531, ]
+datatest = data[ 1532, ]
+max = apply(data , 2 , max)
+min = apply(data, 2 , min)
+scaled = as.data.frame(scale(data, center = min, scale = max - min))
+# install library
+install.packages("neuralnet ")
+load library
+library(neuralnet)
+# creating training and test set
+trainNN = scaled[1:1531 , ]
+testNN = scaled[1532 , ] 
+# fit neural network
+set.seed(2)
+NN = neuralnet( A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10 + A11 + A12 + A13 + A14 + A15 + A16 + A17 + A18 + A19 + A20 + A21 + A22 + A23 + A24 + A25, trainNN, hidden = 3 , linear.output = T ) 
+View(testNN)
+predict_testNN = compute(NN, testNN[,c(2:25)])
+predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1))) + min(data$A1)
+plot(datatest$A1, predict_testNN, col='blue', pch=16, ylab = "predicted price NN", xlab = "real prices")
+abline(0,1)
+View(datatest)
+View(predict_testNN)
+AI.P <- c()
+View(data)
+View(data)
+View(predict_testNN)
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10 + A11 + A12 + A13 + A14 + A15 + A16 + A17 + A18 + A19 + A20 + A21 + A22 + A23 + A24 + A25, trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:25)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1))) + min(data$A1)
+  AI.P[n] <- predict_testNN
+}
+View(AI.P)
+AI.P2 <- c()
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10, trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:10)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1))) + min(data$A1)
+  AI.P2[n] <- predict_testNN
+}
+Reals <- data[1503:1532,1]
+View(Reals)
+View(data)
+RSMP <- sqrt(sum((Reals-AI.P)^2))
+RSMP2 <- sqrt(sum((Reals-AI.P2)^2))
+View(AI.P)
+library(readr)
+AIR1 <- read_csv2("Desktop/AIR1.csv")
+data <- AIR1
+AIR.P2 <- c()
+View(data)
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10, trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:10)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1))) + min(data$A1)
+  AIR.P2[n] <- predict_testNN
+}
+BN.P2 <- c()
+library(readr)
+BN1 <- read_csv2("Desktop/BN1.csv")
+View(BN1)
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10, trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:10)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1))) + min(data$A1)
+  BN.P2[n] <- predict_testNN
+}
+View(data)
+data <- BN1
+View(data)
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10, trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:10)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1))) + min(data$A1)
+  BN.P2[n] <- predict_testNN
+}
+library(readr)
+BNP1 <- read_csv2("Desktop/BNP1.csv")
+View(BNP1)
+data <- BNP1
+View(data)
+BNP.P2 <- c()
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10, trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:10)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1))) + min(data$A1)
+  BNP.P2[n] <- predict_testNN
+}
+DG.P2 <- c()
+library(readr)
+DG1 <- read_csv2("Desktop/DG1.csv")
+View(DG1)
+data <- DG1
+View(data)
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10, trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:10)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1))) + min(data$A1)
+  DG.P2[n] <- predict_testNN
+}
+View(AIR.P2)
+View(AI1)
+AI.R <- AI1[1502:1531, c(2)]
+View(AI.R)
+View(AI1)
+View(AIR1)
+AIR.R <- AIR1[1502:1531, c(1)]
+View(BN1)
+BN.R <- BN1[1502:1531, c(1)]
+View(BNP1)
+BNP.R <- BNP1[1502:1531, c(1)]
+View(DG1)
+DG.R <- DG1[1502:1531, c(1)]
+AI.DIF <- AI.P2 - AI.R
+AIR.DIF <- AIR.P2 - AIR.R
+BN.DIF <- BN.P2 - BN.R
+BNP.DIF <- BNP.P2 - BNP.R
+DG.DIF <- DG.P2 - DG.R
+df = data.frame(AI.DIF,AIR.DIF,BN.DIF,BNP.DIF,DG.DIF)
+View(df)
+X <- c()
+for (n in 1:30){
+  if (max(df[n,]) == df[n,"A1"]){
+    X[n] = "AI.PA"
+  } else if (max(df[n,]) == df[n,"A1.1"]){
+    X[n] = "AIR.PA"
+  } else if (max(df[n,]) == df[n,"A1.2"]){
+    X[n] = "BN.PA"
+  } else if (max(df[n,]) == df[n,"A1.3"]){
+    X[n] = "BNP.PA"
+  } else if (max(df[n,]) == df[n,"A1.4"]){
+    X[n] = "DG.PA"
+  }
+}
+View(X)
+# see file "PREDICTION SIMPLE.xlsx" for the investment strategy outcome
+

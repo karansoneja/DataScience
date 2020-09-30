@@ -1,0 +1,98 @@
+#Credit: http://rpubs.com/kapage/523169?fbclid=IwAR1LcmQ6zQ7Nx0FbMrQqQFml9QtJWx9_bybKAsKwWIPplCS60KBbpoDCElM
+#download file PREDICTION SIMPLE.xlsx
+if(!require(quantmod)) install.packages("quantmod")
+if(!require(forecast)) install.packages("forecast")
+if(!require(xlsx)) install.packages("xlsx")
+if(!require(tseries)) install.packages("tseries")
+if(!require(timeSeries)) install.packages("timeSeries")
+if(!require(dplyr)) install.packages("dplyr")
+if(!require(fGarch)) install.packages("fGarch")
+if(!require(prophet)) install.packages("prophet")
+library(prophet)
+library(quantmod)
+library(forecast)
+library("xlsx")
+library(tseries)
+library(timeSeries)
+library(dplyr)
+library(fGarch)
+
+getSymbols("AI.PA", src="yahoo", from="2016-12-31", to="2018-12-31")
+getSymbols("AIR.PA", src="yahoo", from="2016-12-31", to="2018-12-31")
+getSymbols("BN.PA", src="yahoo", from="2016-12-31", to="2018-12-31")
+getSymbols("BNP.PA", src="yahoo", from="2016-12-31", to="2018-12-31")
+getSymbols("DG.PA", src="yahoo", from="2016-12-31", to="2018-12-31")
+
+alpha <- 1.5^(-10)
+AIR.PA.P <- c()
+AI.PA.P <- c()
+BN.PA.P <- c()
+BNP.PA.P <- c()
+DG.PA.P <- c()
+
+for (n in 1:30){
+  close_price <- as.numeric(AIR.PA[1:479+n,'AIR.PA.Close'])
+  hn <- length(close_price)/(alpha*(length(close_price)+1))
+  lambda <- BoxCox.lambda(close_price)
+  dnn_pred <- nnetar(close_price, size= hn, lambda = lambda) 
+  dnn_forecast <- forecast(dnn_pred, h= 1, PI = TRUE)   
+  AIR.PA.P[n] = dnn_forecast[["mean"]] 
+}
+
+for (n in 1:30){
+   close_price <- as.numeric(BN.PA[1:479+n,'BN.PA.Close'])
+   hn <- length(close_price)/(alpha*(length(close_price)+1))
+   lambda <- BoxCox.lambda(close_price)
+   dnn_pred <- nnetar(close_price, size= hn, lambda = lambda)
+   dnn_forecast <- forecast(dnn_pred, h= 1, PI = TRUE)
+   BN.PA.P[n] = dnn_forecast[["mean"]]
+ }
+ 
+for (n in 1:30){
+   close_price <- as.numeric(AI.PA[1:479+n,'AI.PA.Close'])
+   hn <- length(close_price)/(alpha*(length(close_price)+1))
+   lambda <- BoxCox.lambda(close_price)
+   dnn_pred <- nnetar(close_price, size= hn, lambda = lambda)
+   dnn_forecast <- forecast(dnn_pred, h= 1, PI = TRUE)
+   AI.PA.P[n] = dnn_forecast[["mean"]]
+ }
+ 
+for (n in 1:30){
+   close_price <- as.numeric(BNP.PA[1:479+n,'BNP.PA.Close'])
+   hn <- length(close_price)/(alpha*(length(close_price)+1))
+   lambda <- BoxCox.lambda(close_price)
+   dnn_pred <- nnetar(close_price, size= hn, lambda = lambda)
+   dnn_forecast <- forecast(dnn_pred, h= 1, PI = TRUE)
+   BNP.PA.P[n] = dnn_forecast[["mean"]]
+ }
+ 
+for (n in 1:30){
+   close_price <- as.numeric(DG.PA[1:479+n,'DG.PA.Close'])
+   hn <- length(close_price)/(alpha*(length(close_price)+1))
+   lambda <- BoxCox.lambda(close_price)
+   dnn_pred <- nnetar(close_price, size= hn, lambda = lambda)
+   dnn_forecast <- forecast(dnn_pred, h= 1, PI = TRUE)
+   DG.PA.P[n] = dnn_forecast[["mean"]]
+ }
+ 
+AIR.LOL <- AIR.PA.P - as.numeric(AIR.PA[480:509,'AIR.PA.Close'])
+BN.LOL <- BN.PA.P - as.numeric(BN.PA[480:509,'BN.PA.Close'])
+BNP.LOL <- BNP.PA.P - as.numeric(BNP.PA[480:509,'BNP.PA.Close'])
+DG.LOL <- DG.PA.P - as.numeric(DG.PA[480:509,'DG.PA.Close'])
+
+df = data.frame(AI.LOL,AIR.LOL,BN.LOL,BNP.LOL,DG.LOL)
+
+for (n in 1:30){
+   if (max(df[n,]) == df[n,"AI.LOL"]){
+   AI.DIF[n] = "AI.PA"
+   } else if (max(df[n,]) == df[n,"AIR.LOL"]){
+   AI.DIF[n] = "AIR.PA"
+   } else if (max(df[n,]) == df[n,"BN.LOL"]){
+   AI.DIF[n] = "BN.PA"
+   } else if (max(df[n,]) == df[n,"BNP.LOL"]){
+   AI.DIF[n] = "BNP.PA"
+   } else if (max(df[n,]) == df[n,"DG.LOL"]){
+   AI.DIF[n] = "DG.PA"
+   }
+}
+#See file "PREDICTION SIMPLE.xlsx" to see results of investment strategy based on the code above

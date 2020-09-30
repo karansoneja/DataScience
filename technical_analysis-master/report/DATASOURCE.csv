@@ -1,0 +1,20 @@
+﻿ECONOMIC FACTORS;Source;YEARLY FINANCIAL STATEMENT VARIABLES;Source
+Daily interest rate;sdw.ecb.europa.eu;Dividend;"dividenmax.com                                                   
+airbus.com                                                                   airliquide.com
+invest.bnpparibas.com
+danone.com
+vinci.com "
+;;Revenue;
+;;Net income;
+;;Basic earnings per share;
+Daily Exchange rate (EUR  USD);exchangerates.org;Diluted earnings per share;
+;;Total assets;
+;;Intangible assets;
+;;PPE;
+Political Stability (yearly);databank.worldbank.org;Cash;
+;;Total equity ;
+;;Non current liability;
+;;Cash flows from operating activities;
+CPI Infaltion (monthly);www.inflation.eu;Net cash flows from investing activities;
+;;Net cash flows from financing activities;
+;;Net cash and cash equivalents at end of period;

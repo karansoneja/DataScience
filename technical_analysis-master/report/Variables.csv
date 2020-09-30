@@ -1,0 +1,11 @@
+Sno.,Variables ,Sno.,Variables 
+1,AI.PA.Close,11,TOTAL.ASSETS
+2,Interest.rates,12,INTANGIBLE.ASSETS
+3,ExchangeRate,13,PPE 
+4,PoliticalStability,14,CASH
+5,Infaltion,15,TOTAL.EQUITY
+6,AirLiquideDividend,16,NON.CURRENT.LIABILITY
+7,REVENUE,17,Cash.flows.from.operating.activities
+8,NET.INCOME,18,Net.cash.flows.from.investing.activities
+9,Basic.earnings.per.share,19,Net.cash.flows.from.financing.activities 
+10,Diluted.earnings.per.share ,20,Net.cash.and.cash.equivalents

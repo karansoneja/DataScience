@@ -1,0 +1,420 @@
+## 1-input NN
+The first NN model is a single hidden layer neural network. In this model there is one layer of input nodes that send weighted inputs to a subsequent layer of receiving nodes. The nnetar function in the forecast package fits a single hidden layer neural network model to a timeseries. The function model approach is to use lagged values of the time series as input data, reaching to a non-linear autoregressive model. The model takes as input the stock prices starting from the 31/12/2016 to 31/12/2018. The goal is to predict the stock prices between 16/11/2018 and 31/12/2018. 
+
+<!-- Credit: http://rpubs.com/kapage/523169?fbclid=IwAR1LcmQ6zQ7Nx0FbMrQqQFml9QtJWx9_bybKAsKwWIPplCS60KBbpoDCElM -->
+
+<!-- download file PREDICTION SIMPLE.xlsx -->
+
+```{r eval= FALSE}
+
+library(prophet)
+library(quantmod)
+library(forecast)
+library(xlsx)
+library(tseries)
+library(timeSeries)
+library(dplyr)
+library(fGarch)
+#Download the prices for the 5 stocks for the desired time frame
+getSymbols("AI.PA", src="yahoo", from="2016-12-31", to="2018-12-31")
+getSymbols("AIR.PA", src="yahoo", from="2016-12-31", to="2018-12-31")
+getSymbols("BN.PA", src="yahoo", from="2016-12-31", to="2018-12-31")
+getSymbols("BNP.PA", src="yahoo", from="2016-12-31", to="2018-12-31")
+getSymbols("DG.PA", src="yahoo", from="2016-12-31", to="2018-12-31")
+
+alpha <- 1.5^(-10)
+AIR.PA.P <- c()
+AI.PA.P <- c()
+BN.PA.P <- c()
+BNP.PA.P <- c()
+DG.PA.P <- c()
+```
+
+We generate the predicted price of the 30 days for the 5 stocks with a `for loop`, where the prices are predicted one at the time.
+
+```{r eval= FALSE}
+for (n in 1:30){
+  close_price <- as.numeric(AIR.PA[1:479+n,'AIR.PA.Close'])
+#Hidden layers creation
+  alpha <- 1.5^(-10) 
+  hn <- length(close_price)/(alpha*(length(close_price)+1))
+#Fitting nnetar
+  lambda <- BoxCox.lambda(close_price)
+  dnn_pred <- nnetar(close_price, size= hn, lambda = lambda) 
+  dnn_forecast <- forecast(dnn_pred, h= 1, PI = TRUE)   
+  AIR.PA.P[n] = dnn_forecast[["mean"]] 
+}
+
+for (n in 1:30){
+   close_price <- as.numeric(BN.PA[1:479+n,'BN.PA.Close'])
+   hn <- length(close_price)/(alpha*(length(close_price)+1))
+   lambda <- BoxCox.lambda(close_price)
+   dnn_pred <- nnetar(close_price, size= hn, lambda = lambda)
+   dnn_forecast <- forecast(dnn_pred, h= 1, PI = TRUE)
+   BN.PA.P[n] = dnn_forecast[["mean"]]
+ }
+ 
+for (n in 1:30){
+   close_price <- as.numeric(AI.PA[1:479+n,'AI.PA.Close'])
+   hn <- length(close_price)/(alpha*(length(close_price)+1))
+   lambda <- BoxCox.lambda(close_price)
+   dnn_pred <- nnetar(close_price, size= hn, lambda = lambda)
+   dnn_forecast <- forecast(dnn_pred, h= 1, PI = TRUE)
+   AI.PA.P[n] = dnn_forecast[["mean"]]
+ }
+ 
+for (n in 1:30){
+   close_price <- as.numeric(BNP.PA[1:479+n,'BNP.PA.Close'])
+   hn <- length(close_price)/(alpha*(length(close_price)+1))
+   lambda <- BoxCox.lambda(close_price)
+   dnn_pred <- nnetar(close_price, size= hn, lambda = lambda)
+   dnn_forecast <- forecast(dnn_pred, h= 1, PI = TRUE)
+   BNP.PA.P[n] = dnn_forecast[["mean"]]
+ }
+ 
+for (n in 1:30){
+   close_price <- as.numeric(DG.PA[1:479+n,'DG.PA.Close'])
+   hn <- length(close_price)/(alpha*(length(close_price)+1))
+   lambda <- BoxCox.lambda(close_price)
+   dnn_pred <- nnetar(close_price, size= hn, lambda = lambda)
+   dnn_forecast <- forecast(dnn_pred, h= 1, PI = TRUE)
+   DG.PA.P[n] = dnn_forecast[["mean"]]
+ }
+```
+
+
+We create a table with the predicted daily increase in price for every stock during the 30 days. After that, we will identify the stock with the highest predicted increase in price for every day. This will be the stock where to invest all 
+the capital for the day.
+
+```{r eval= FALSE}
+AIR.LOL <- AIR.PA.P - as.numeric(AIR.PA[480:509,'AIR.PA.Close'])
+BN.LOL <- BN.PA.P - as.numeric(BN.PA[480:509,'BN.PA.Close'])
+BNP.LOL <- BNP.PA.P - as.numeric(BNP.PA[480:509,'BNP.PA.Close'])
+DG.LOL <- DG.PA.P - as.numeric(DG.PA[480:509,'DG.PA.Close'])
+
+df = data.frame(AI.LOL,AIR.LOL,BN.LOL,BNP.LOL,DG.LOL)
+
+for (n in 1:30){
+   if (max(df[n,]) == df[n,"AI.LOL"]){
+   AI.DIF[n] = "AI.PA"
+   } else if (max(df[n,]) == df[n,"AIR.LOL"]){
+   AI.DIF[n] = "AIR.PA"
+   } else if (max(df[n,]) == df[n,"BN.LOL"]){
+   AI.DIF[n] = "BN.PA"
+   } else if (max(df[n,]) == df[n,"BNP.LOL"]){
+   AI.DIF[n] = "BNP.PA"
+   } else if (max(df[n,]) == df[n,"DG.LOL"]){
+   AI.DIF[n] = "DG.PA"
+   }
+}
+```
+
+
+<!-- See file "PREDICTION SIMPLE.xlsx" to see results of investment strategy based on the code above -->
+
+```{r 1-input NN strategy outcome, echo=FALSE}
+nn_one= read.csv(file="D:/2017-2018/data_analysis/technical_analysis/report/02.prediction.simple.csv",
+         header= TRUE, dec = ","  )
+
+
+colnames(nn_one) <- c("Day",	"Invest in",	"date",	"AI",	"AIR",	"BNP",	"BN",	"DG",	"#shares bought",	"€ Value "
+)
+pander::pander(nn_one, caption= "1-input NN strategy outcome", justify= "left", split.table= Inf, split.cells = c(1,2,4,2,2,2,2,2,3,4))
+
+
+```
+
+
+### Evaluation of 1-input NN
+As can be seen, the investment strategy based on the 1-input NN has a return of +4%, which is an extremely good result considering the benchmark strategy return of -6%. This implies that, even though all the 5 stocks had negative performances during the time frame, the NN successfully identified the right stock at the right time, leading to a positive return.
+
+
+## Multiple-input NN
+The second NN model uses the neuralnet library for the analysis. It has 3 neurons in its hidden layer and the weights are calculated using a back propagation algorithm. The model takes several inputs that for simpliticy have been coded according to the following table:
+
+```{r variables coding, echo=FALSE}
+coding = read.csv(file="D:/2017-2018/data_analysis/technical_analysis/report/VariableCode.csv",
+         header= TRUE, dec = ","  )
+
+colnames(coding) <- c("Variable", "Identifier","Variable", "Identifier","Variable", "Identifier")
+pander::pander(coding, caption= "Variables coding", justify= "left", split.table= Inf)
+
+
+
+
+```
+
+
+The goal is always to predict stock prices of the 30 days, hoping that the inclusion of additional variables like high price, low price, inflation and financial statements data will provide more accurate predictions.
+
+<!-- Credits: https://www.analyticsvidhya.com/blog/2017/09/creating-visualizing-neural-network-in-r/?fbclid=IwAR18hPVMs63r5YbqIzvmgVjxax_rk9Fi9SmrtBnw24hdxSy5EFTynvDaHOY -->
+
+
+```{r eval= FALSE}
+#Download "AI1.csv" "AIR1.csv" "BN1.csv" "BNP1.csv" 
+#Download "DG1.csv" "PREDICTION SIMPLE.xlsx"
+library(readr)
+AI1 <- read_csv2("D:/2017-2018/data_analysis/technical_analysis/report/AI1.csv")
+data <- AI1[, c(2:26)]
+View(data)
+#we take all the data frame as training data to predict the next-day stock price
+datatrain = data[ 1:1531, ]
+datatest = data[ 1532, ]
+#we normalize the values to avoid results based only on the disporportionate
+#size of certain inputs
+max = apply(data , 2 , max)
+min = apply(data, 2 , min)
+scaled = as.data.frame(scale(data, center = min, scale = max - min))
+# install library
+install.packages("neuralnet ")
+#load library
+library(neuralnet)
+# creating training and test set
+# the test set will be the closing price of a single day
+# the training set will be all the data of the days before the day of the test set
+trainNN = scaled[1:1531 , ]
+testNN = scaled[1532 , ] 
+
+```
+
+
+We want to predict every next day price for the 5 stocks. But first, we want to check weather the the model gives more accurate results with or without the financial statement data as inputs.
+
+
+```{r eval= FALSE}
+# fit neural network
+set.seed(2)
+# Develop a NN model with tomorrow closing price as output and
+# all the other variables (taken today) as input
+NN = neuralnet( A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10
++ A11 + A12 + A13 + A14 + A15 + A16 + A17 + A18 + A19 + A20 + A21
++ A22 + A23 + A24 + A25, trainNN, hidden = 3 , linear.output = T ) 
+View(testNN)
+predict_testNN = compute(NN, testNN[,c(2:25)])
+# We descale the output to obtain the results in the real scale
+predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1)))
++ min(data$A1)
+# We create an array where to store the results per day for each stck
+AI.P <- c()
+View(data)
+View(data)
+# We run the model for every single day per stock, to predict the prices 
+# one by one
+View(predict_testNN)
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+# model with financial statements data
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10
+  + A11 + A12 + A13 + A14 + A15 + A16 + A17 + A18 + A19 + A20 + A21
+  + A22 + A23 + A24 + A25, trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:25)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1)))
+  + min(data$A1)
+  AI.P[n] <- predict_testNN
+}
+View(AI.P)
+AI.P2 <- c()
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+# model without financial statements data
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10,
+  trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:10)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1)))
+  + min(data$A1)
+  AI.P2[n] <- predict_testNN
+}
+# Calculate Root Mean Square Error (RMSE)
+Reals <- data[1503:1532,1]
+View(Reals)
+View(data)
+RMSE <- sqrt(sum((Reals-AI.P)^2)) # RMSE = 6.072
+RMSE2 <- sqrt(sum((Reals-AI.P2)^2)) # RMSE2 = 6.064
+View(AI.P)
+```
+
+
+As can be seen, the model without the financial statement variables (RMSE = 6.072) is more accurate than the model with them (RMSE2 = 6.064) according to the RMSE value. Hence, we will continue without taking into account the financial statement variables.
+
+```{r eval= FALSE}
+#We predict the prices of the other 4 stocks one by one,
+#without the financial statement variables as input
+library(readr)
+AIR1 <- read_csv2("D:/2017-2018/data_analysis/technical_analysis/data/AIR1.csv")
+data <- AIR1
+AIR.P2 <- c()
+View(data)
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10,
+  trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:10)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1)))
+  + min(data$A1)
+  AIR.P2[n] <- predict_testNN
+}
+BN.P2 <- c()
+library(readr)
+BN1 <- read_csv2("D:/2017-2018/data_analysis/technical_analysis/data/BN1.csv")
+View(BN1)
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10,
+  trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:10)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1)))
+  + min(data$A1)
+  BN.P2[n] <- predict_testNN
+}
+View(data)
+data <- BN1
+View(data)
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10,
+  trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:10)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1)))
+  + min(data$A1)
+  BN.P2[n] <- predict_testNN
+}
+library(readr)
+BNP1 <- read_csv2("D:/2017-2018/data_analysis/technical_analysis/data/BNP1.csv")
+View(BNP1)
+data <- BNP1
+View(data)
+BNP.P2 <- c()
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10,
+  trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:10)])
+  predict_testNN = (predict_testNN$net.result * (max(data$A1) - min(data$A1)))
+  + min(data$A1)
+  BNP.P2[n] <- predict_testNN
+}
+DG.P2 <- c()
+library(readr)
+DG1 <- read_csv2("D:/2017-2018/data_analysis/technical_analysis/data/DG1.csv")
+View(DG1)
+data <- DG1
+View(data)
+for (n in 1:30){
+  datatrain = data[ 1:1501+n, ]
+  datatest = data[ 1502+n, ]
+  max = apply(data , 2 , max)
+  min = apply(data, 2 , min)
+  scaled = as.data.frame(scale(data, center = min, scale = max - min))
+  trainNN = scaled[1:1501+n , ]
+  testNN = scaled[1502+n , ]
+  NN = neuralnet(A1 ~ A2 + A3 + A4 + A5 + A6 + A7 + A8 + A9 + A10, 
+                 trainNN, hidden = 3 , linear.output = T )
+  predict_testNN = compute(NN, testNN[,c(2:10)])
+  predict_testNN = (predict_testNN$net.result * 
+                      (max(data$A1) - min(data$A1))) + min(data$A1)
+  DG.P2[n] <- predict_testNN
+}
+```
+
+We want to create a table with the predicted daily increase in price for every stock during the 30 days. After that, we will identify the stock with the highest predicted increase in price for every day. This will be the stock where to invest all the capital for the day.
+
+```{r eval= FALSE}
+View(AIR.P2)
+View(AI1)
+AI.R <- AI1[1502:1531, c(2)]
+View(AI.R)
+View(AI1)
+View(AIR1)
+AIR.R <- AIR1[1502:1531, c(1)]
+View(BN1)
+BN.R <- BN1[1502:1531, c(1)]
+View(BNP1)
+BNP.R <- BNP1[1502:1531, c(1)]
+View(DG1)
+DG.R <- DG1[1502:1531, c(1)]
+AI.DIF <- AI.P2 - AI.R
+AIR.DIF <- AIR.P2 - AIR.R
+BN.DIF <- BN.P2 - BN.R
+BNP.DIF <- BNP.P2 - BNP.R
+DG.DIF <- DG.P2 - DG.R
+df = data.frame(AI.DIF,AIR.DIF,BN.DIF,BNP.DIF,DG.DIF)
+View(df)
+#identify the stock with the highest predicted increase in price for every day
+X <- c()
+for (n in 1:30){
+  if (max(df[n,]) == df[n,"A1"]){
+    X[n] = "AI.PA"
+  } else if (max(df[n,]) == df[n,"A1.1"]){
+    X[n] = "AIR.PA"
+  } else if (max(df[n,]) == df[n,"A1.2"]){
+    X[n] = "BN.PA"
+  } else if (max(df[n,]) == df[n,"A1.3"]){
+    X[n] = "BNP.PA"
+  } else if (max(df[n,]) == df[n,"A1.4"]){
+    X[n] = "DG.PA"
+  }
+}
+View(X)
+
+```
+
+
+<!-- see file "PREDICTION SIMPLE.xlsx" for the investment strategy outcome -->
+
+```{r multiple input NN strategy outcome, echo=FALSE}
+nn_mult= read.csv(file="D:/2017-2018/data_analysis/technical_analysis/report/03.prediction.simple.csv",
+         header= TRUE, dec = ","  )
+
+
+colnames(nn_mult) <- c("Day",	"Invest in",	"date",	"AI",	"AIR",	"BNP",	"BN",	"DG",	"#shares bought",	"€ Value "
+)
+pander::pander(nn_mult, caption= "Multiple-input NN strategy outcome", justify= "left", split.table= Inf)
+
+```
+
+
+### Evaluation of Multiple-input NN
+
+As can be seen, the multiple-input based investment has a return of -7%. This shows that this method cannot be used to predict stock prices. We believe this is because the method predicts prices based on just the previous-day values of several variables, hence without considering the time-serie behind the price trend. Instead, the 1-input NN took into account the whole trend of the prices during the previous 1 year and a half.
+
+## Neuronal Network Conclusion
+
+To conclude, we can argue that the 1-input NN can be successfully used to invest in stocks. We recommend to further test and validate this method over a larger number of stocks (100) and over a longer time frame (1 year of predicted prices) before investing in real life with this model.
+
+\newpage
